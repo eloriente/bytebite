@@ -1,0 +1,65 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./data/bytebite.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("USER")
+  diets     Diet[]
+  createdAt DateTime @default(now())
+}
+
+model Diet {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  isActive  Boolean   @default(true)
+  pdfPath   String?
+  days      DietDay[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model DietDay {
+  id        String  @id @default(cuid())
+  dietId    String
+  diet      Diet    @relation(fields: [dietId], references: [id], onDelete: Cascade)
+  dayOfWeek String
+  meals     Meal[]
+}
+
+model Meal {
+  id        String       @id @default(cuid())
+  dietDayId String
+  dietDay   DietDay      @relation(fields: [dietDayId], references: [id], onDelete: Cascade)
+  name      String
+  order     Int
+  options   MealOption[]
+}
+
+model MealOption {
+  id          String  @id @default(cuid())
+  mealId      String
+  meal        Meal    @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  items       Item[]
+}
+
+model Item {
+  id           String     @id @default(cuid())
+  mealOptionId String
+  mealOption   MealOption @relation(fields: [mealOptionId], references: [id], onDelete: Cascade)
+  ingredient   String
+  amount       String
+  checked      Boolean    @default(false)
+}

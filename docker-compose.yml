@@ -1,0 +1,21 @@
+services:
+  bytebite:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bytebite
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - AUTH_SECRET=${AUTH_SECRET}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - SEED_USER_1_EMAIL=${SEED_USER_1_EMAIL:-user1@bytebite.app}
+      - SEED_USER_1_NAME=${SEED_USER_1_NAME:-Usuario 1}
+      - SEED_USER_1_PASSWORD=${SEED_USER_1_PASSWORD:-changeme1}
+      - SEED_USER_2_EMAIL=${SEED_USER_2_EMAIL:-user2@bytebite.app}
+      - SEED_USER_2_NAME=${SEED_USER_2_NAME:-Usuario 2}
+      - SEED_USER_2_PASSWORD=${SEED_USER_2_PASSWORD:-changeme2}
+    volumes:
+      - ./prisma/data:/app/prisma/data
