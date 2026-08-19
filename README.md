@@ -39,9 +39,17 @@ Añade tus propios iconos en `public/icons/icon-192.png` y `public/icons/icon-51
 
 ```bash
 cp .env.example .env   # rellena las variables
+
+# El contenedor corre como usuario no-root (uid 1001). Como el volumen es un
+# bind mount, hay que crear la carpeta con permisos de escritura ANTES del
+# primer arranque, o Docker la creará como root y Prisma no podrá escribir
+# el .db (EACCES / SQLITE_CANTOPEN).
+mkdir -p prisma/data && chmod 777 prisma/data
+
 docker compose up -d --build
 ```
 
 El volumen `./prisma/data` persiste la base de datos SQLite y los PDFs subidos
 entre reinicios del contenedor. El contenedor ejecuta `prisma migrate deploy`
-automáticamente al arrancar.
+automáticamente al arrancar, aplicando las migraciones versionadas en
+`prisma/migrations/` (por eso esa carpeta debe estar commiteada en git).
