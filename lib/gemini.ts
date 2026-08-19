@@ -1,10 +1,21 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error("GEMINI_API_KEY is not set in the environment");
-}
+let _genAI: GoogleGenAI | null = null;
 
-export const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+/**
+ * Lazily instantiated so importing this module (e.g. during `next build`'s
+ * page-data collection for the route handler) never requires the API key —
+ * only calling extractDietFromPdf() at request time does.
+ */
+function getGenAI(): GoogleGenAI {
+  if (!_genAI) {
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error("GEMINI_API_KEY is not set in the environment");
+    }
+    _genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  }
+  return _genAI;
+}
 
 export const GEMINI_MODEL = "gemini-3.6-flash";
 
@@ -108,7 +119,7 @@ export async function extractDietFromPdf(
 ): Promise<ParsedDiet> {
   const base64Pdf = pdfBuffer.toString("base64");
 
-  const response = await genAI.models.generateContent({
+  const response = await getGenAI().models.generateContent({
     model: GEMINI_MODEL,
     contents: [
       {
