@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DailySummary } from "@/components/diet/daily-summary";
 import { MealCard } from "@/components/diet/meal-card";
-import { DAYS_OF_WEEK } from "@/lib/utils";
+import { DAYS_OF_WEEK, DAYS_OF_WEEK_SHORT } from "@/lib/utils";
 import type { DietDay } from "@/components/diet/types";
 
 function todayInSpanish() {
@@ -28,10 +28,15 @@ export function DietViewer({ days }: { days: DietDay[] }) {
 
   return (
     <Tabs defaultValue={defaultDay} className="w-full">
-      <TabsList>
+      <TabsList className="grid grid-cols-7 gap-1">
         {orderedDays.map((day) => (
-          <TabsTrigger key={day.id} value={day.id}>
-            {day.dayOfWeek}
+          <TabsTrigger
+            key={day.id}
+            value={day.id}
+            title={day.dayOfWeek}
+            className="px-1 text-xs sm:text-sm"
+          >
+            {DAYS_OF_WEEK_SHORT[day.dayOfWeek] ?? day.dayOfWeek}
           </TabsTrigger>
         ))}
       </TabsList>

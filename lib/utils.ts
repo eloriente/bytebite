@@ -14,3 +14,13 @@ export const DAYS_OF_WEEK = [
   "Sábado",
   "Domingo",
 ] as const;
+
+export const DAYS_OF_WEEK_SHORT: Record<string, string> = {
+  Lunes: "Lun",
+  Martes: "Mar",
+  Miércoles: "Mié",
+  Jueves: "Jue",
+  Viernes: "Vie",
+  Sábado: "Sáb",
+  Domingo: "Dom",
+};

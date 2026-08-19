@@ -123,7 +123,7 @@ export function MealCard({ meal }: { meal: Meal }) {
                           item.carbs != null ||
                           item.fat != null;
                         return (
-                          <li key={item.id} className="flex items-start gap-3">
+                          <li key={item.id} className="flex items-start gap-3 capitalize">
                             <Checkbox
                               id={item.id}
                               checked={item.checked}

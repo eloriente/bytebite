@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -35,7 +36,10 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center px-6">
+    <main className="relative flex min-h-dvh flex-col items-center justify-center px-6">
+      <div className="absolute right-3 top-3">
+        <ThemeToggle />
+      </div>
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
           <h1 className="text-2xl font-bold">ByteBite</h1>
