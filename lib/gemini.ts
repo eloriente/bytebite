@@ -54,6 +54,10 @@ export const dietResponseSchema = {
                           properties: {
                             ingredient: { type: Type.STRING },
                             amount: { type: Type.STRING },
+                            calories: { type: Type.NUMBER, nullable: true },
+                            protein: { type: Type.NUMBER, nullable: true },
+                            carbs: { type: Type.NUMBER, nullable: true },
+                            fat: { type: Type.NUMBER, nullable: true },
                           },
                           required: ["ingredient", "amount"],
                         },
@@ -77,6 +81,10 @@ export const dietResponseSchema = {
 export interface ParsedDietItem {
   ingredient: string;
   amount: string;
+  calories?: number | null;
+  protein?: number | null;
+  carbs?: number | null;
+  fat?: number | null;
 }
 
 export interface ParsedDietOption {
@@ -112,7 +120,11 @@ el esquema proporcionado. Reglas:
   "options" por cada alternativa. Si solo hay una alternativa, crea igualmente un único option
   con name "Opción única".
 - Cada ingrediente con su cantidad va en "items" (ingredient + amount, p.ej. "Pechuga de pollo" / "150 g").
-- No inventes datos que no aparezcan en el documento. Sé fiel al texto original.`;
+- No inventes datos que no aparezcan en el documento. Sé fiel al texto original para "ingredient" y "amount".
+- Además, para cada item, ESTIMA sus valores nutricionales (calories en kcal, protein/carbs/fat en gramos)
+  correspondientes a la cantidad indicada en "amount", usando tu conocimiento nutricional general (no es
+  necesario que el documento incluya estos datos). Si no puedes hacer una estimación razonable para un
+  ingrediente o cantidad concretos, deja esos campos en null en lugar de forzar un valor.`;
 
 export async function extractDietFromPdf(
   pdfBuffer: Buffer,

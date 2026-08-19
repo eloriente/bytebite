@@ -2,35 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MealAccordion } from "@/components/diet/meal-accordion";
+import { DailySummary } from "@/components/diet/daily-summary";
+import { MealCard } from "@/components/diet/meal-card";
 import { DAYS_OF_WEEK } from "@/lib/utils";
-
-interface Item {
-  id: string;
-  ingredient: string;
-  amount: string;
-  checked: boolean;
-}
-
-interface MealOption {
-  id: string;
-  name: string;
-  description: string | null;
-  items: Item[];
-}
-
-interface Meal {
-  id: string;
-  name: string;
-  order: number;
-  options: MealOption[];
-}
-
-interface DietDay {
-  id: string;
-  dayOfWeek: string;
-  meals: Meal[];
-}
+import type { DietDay } from "@/components/diet/types";
 
 function todayInSpanish() {
   const idx = new Date().getDay(); // 0 = Sunday
@@ -63,14 +38,18 @@ export function DietViewer({ days }: { days: DietDay[] }) {
 
       {orderedDays.map((day) => (
         <TabsContent key={day.id} value={day.id} className="space-y-3">
-          {day.meals.length === 0 && (
+          {day.meals.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
               No hay comidas registradas para este día.
             </p>
+          ) : (
+            <>
+              <DailySummary meals={day.meals} />
+              {day.meals.map((meal) => (
+                <MealCard key={meal.id} meal={meal} />
+              ))}
+            </>
           )}
-          {day.meals.map((meal) => (
-            <MealAccordion key={meal.id} meal={meal} />
-          ))}
         </TabsContent>
       ))}
     </Tabs>

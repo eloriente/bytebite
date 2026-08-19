@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "Item" ADD COLUMN "calories" INTEGER;
+ALTER TABLE "Item" ADD COLUMN "carbs" REAL;
+ALTER TABLE "Item" ADD COLUMN "fat" REAL;
+ALTER TABLE "Item" ADD COLUMN "protein" REAL;

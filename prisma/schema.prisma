@@ -62,4 +62,8 @@ model Item {
   ingredient   String
   amount       String
   checked      Boolean    @default(false)
+  calories     Int?
+  protein      Float?
+  carbs        Float?
+  fat          Float?
 }

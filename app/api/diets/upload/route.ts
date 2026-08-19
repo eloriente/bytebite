@@ -78,6 +78,10 @@ export async function POST(request: NextRequest) {
                       create: option.items.map((item) => ({
                         ingredient: item.ingredient,
                         amount: item.amount,
+                        calories: item.calories ?? null,
+                        protein: item.protein ?? null,
+                        carbs: item.carbs ?? null,
+                        fat: item.fat ?? null,
                       })),
                     },
                   })),
