@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel, Type } from "@google/genai";
 
 let _genAI: GoogleGenAI | null = null;
 
@@ -138,6 +138,7 @@ export async function extractDietFromPdf(
     config: {
       responseMimeType: "application/json",
       responseSchema: dietResponseSchema,
+      thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
     },
   });
 
