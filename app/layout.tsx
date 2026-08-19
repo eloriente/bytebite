@@ -12,8 +12,8 @@ export const metadata: Metadata = {
     title: "ByteBite",
   },
   icons: {
-    apple: "/icons/icon-192.png",
-    icon: "/icons/icon-192.png",
+    apple: "/icons/icon-apple.png",
+    icon: "/icons/favicon.ico",
   },
 };
 
@@ -26,7 +26,11 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="es" suppressHydrationWarning>
       <body className="min-h-dvh antialiased">
