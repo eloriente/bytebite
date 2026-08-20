@@ -24,3 +24,8 @@ export const DAYS_OF_WEEK_SHORT: Record<string, string> = {
   Sábado: "Sáb",
   Domingo: "Dom",
 };
+
+export async function parseErrorBody(res: Response, fallback: string) {
+  const body = await res.json().catch(() => ({}));
+  return body.error ?? fallback;
+}

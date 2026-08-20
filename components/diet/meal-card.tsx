@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EntityFormDialog } from "@/components/diet/entity-form-dialog";
 import { ConfirmDeleteButton } from "@/components/diet/confirm-delete-button";
-import { cn } from "@/lib/utils";
+import { cn, parseErrorBody } from "@/lib/utils";
 import { sumMacros } from "@/lib/nutrition";
 import type { Meal } from "@/components/diet/types";
 
@@ -32,11 +32,6 @@ const MEAL_ICONS: { keywords: string[]; icon: LucideIcon }[] = [
 function getMealIcon(name: string): LucideIcon {
   const lower = name.toLowerCase();
   return MEAL_ICONS.find((entry) => entry.keywords.some((kw) => lower.includes(kw)))?.icon ?? Utensils;
-}
-
-async function parseErrorBody(res: Response, fallback: string) {
-  const body = await res.json().catch(() => ({}));
-  return body.error ?? fallback;
 }
 
 export function MealCard({ meal }: { meal: Meal }) {

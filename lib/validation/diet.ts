@@ -53,3 +53,7 @@ export const optionUpdateSchema = optionCreateSchema.partial();
 
 export const itemCreateSchema = dietItemSchema;
 export const itemUpdateSchema = dietItemSchema.partial();
+
+export const dietRenameSchema = z.object({
+  title: z.string().trim().min(1, "El título es obligatorio.").max(200),
+});
