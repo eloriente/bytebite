@@ -47,7 +47,7 @@ export default async function DashboardPage({
 
   if (!diet) {
     return (
-      <main className="flex min-h-[calc(100dvh-3.5rem)] flex-col items-center justify-center gap-4 p-6 text-center">
+      <main className="flex min-h-[calc(100dvh-3.5rem-env(safe-area-inset-top))] flex-col items-center justify-center gap-4 p-6 text-center">
         <UtensilsCrossed className="h-12 w-12 text-muted-foreground" />
         <h1 className="text-xl font-semibold">Aún no tienes una dieta activa</h1>
         <p className="max-w-xs text-sm text-muted-foreground">

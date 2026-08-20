@@ -215,7 +215,7 @@ function RegisterForm() {
 export default function LoginPage() {
   return (
     <main className="relative flex min-h-dvh flex-col items-center justify-center px-6">
-      <div className="absolute right-3 top-3">
+      <div className="absolute right-3 top-[calc(0.75rem+env(safe-area-inset-top))]">
         <ThemeToggle />
       </div>
       <div className="w-full max-w-sm space-y-6">
