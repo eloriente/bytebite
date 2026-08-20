@@ -3,31 +3,49 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { DietViewer } from "@/components/diet/diet-viewer";
+import { DietSwitcher } from "@/components/diet/diet-switcher";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UtensilsCrossed } from "lucide-react";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: { diet?: string };
+}) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  const diet = await prisma.diet.findFirst({
-    where: { userId: session.user.id, isActive: true },
-    include: {
-      days: {
+  const allDiets = await prisma.diet.findMany({
+    where: { userId: session.user.id },
+    select: { id: true, title: true, isActive: true, createdAt: true },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const selectedId =
+    searchParams.diet && allDiets.some((d) => d.id === searchParams.diet)
+      ? searchParams.diet
+      : (allDiets.find((d) => d.isActive) ?? allDiets[0])?.id;
+
+  const diet = selectedId
+    ? await prisma.diet.findFirst({
+        where: { id: selectedId, userId: session.user.id },
         include: {
-          meals: {
-            orderBy: { order: "asc" },
+          days: {
             include: {
-              options: {
-                include: { items: true },
+              meals: {
+                orderBy: { order: "asc" },
+                include: {
+                  options: {
+                    include: { items: true },
+                  },
+                },
               },
             },
           },
         },
-      },
-    },
-  });
+      })
+    : null;
 
   if (!diet) {
     return (
@@ -62,7 +80,9 @@ export default async function DashboardPage() {
         </div>
       </header>
 
-      <DietViewer days={diet.days} />
+      <DietSwitcher diets={allDiets} selectedId={diet.id} />
+
+      <DietViewer days={diet.days} dietId={diet.id} />
     </main>
   );
 }

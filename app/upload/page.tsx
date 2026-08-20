@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { UploadDropzone } from "@/components/diet/upload-dropzone";
+import { UploadFlow } from "@/components/diet/upload-flow";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export default async function UploadPage() {
@@ -13,13 +13,13 @@ export default async function UploadPage() {
         <div>
           <h1 className="text-xl font-semibold">Subir dieta</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Selecciona el PDF de tu dieta. ByteBite la analizará y organizará por días y comidas.
+            Elige cómo quieres crear tu dieta.
           </p>
         </div>
         <ThemeToggle />
       </header>
 
-      <UploadDropzone />
+      <UploadFlow />
     </main>
   );
 }
