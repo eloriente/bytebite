@@ -8,13 +8,8 @@ import { EntityFormDialog } from "@/components/diet/entity-form-dialog";
 import { ConfirmDeleteButton } from "@/components/diet/confirm-delete-button";
 import { DailySummary } from "@/components/diet/daily-summary";
 import { MealCard } from "@/components/diet/meal-card";
-import { DAYS_OF_WEEK, DAYS_OF_WEEK_SHORT, cn } from "@/lib/utils";
+import { DAYS_OF_WEEK, DAYS_OF_WEEK_SHORT, cn, todayInSpanish } from "@/lib/utils";
 import type { DietDay } from "@/components/diet/types";
-
-function todayInSpanish() {
-  const idx = new Date().getDay(); // 0 = Sunday
-  return DAYS_OF_WEEK[(idx + 6) % 7];
-}
 
 export function DietViewer({ days, dietId }: { days: DietDay[]; dietId: string }) {
   const [editing, setEditing] = useState(false);

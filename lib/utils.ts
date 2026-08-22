@@ -29,3 +29,8 @@ export async function parseErrorBody(res: Response, fallback: string) {
   const body = await res.json().catch(() => ({}));
   return body.error ?? fallback;
 }
+
+export function todayInSpanish() {
+  const idx = new Date().getDay(); // 0 = Sunday
+  return DAYS_OF_WEEK[(idx + 6) % 7];
+}

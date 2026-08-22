@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
-import { Menu, LayoutDashboard, NotebookText, Settings, LogOut } from "lucide-react";
+import { Menu, LayoutDashboard, NotebookText, Settings, LogOut, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
@@ -18,6 +18,7 @@ import {
 const NAV_LINKS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/diets", label: "Gestionar dietas", icon: NotebookText },
+  { href: "/chat", label: "Asistente nutricional", icon: MessageCircle },
   { href: "/settings", label: "Ajustes", icon: Settings },
 ];
 

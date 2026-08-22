@@ -161,3 +161,74 @@ export async function extractDietFromPdf(
 
   return JSON.parse(text) as ParsedDiet;
 }
+
+export interface ChatHistoryMessage {
+  role: "user" | "model";
+  content: string;
+}
+
+interface AskNutritionAssistantParams {
+  history: ChatHistoryMessage[];
+  userText: string;
+  imageBuffer?: Buffer;
+  imageMimeType?: string;
+  goalLabel: string | null;
+  dietSummary: string;
+}
+
+function buildAssistantSystemInstruction(goalLabel: string | null, dietSummary: string): string {
+  return `Eres el asistente nutricional de ByteBite, una app de gestión de dietas. Hablas en español,
+con un tono cercano, informal y nada técnico (como lo haría un amigo que sabe de nutrición, no un
+médico ni un nutricionista clínico). Evita jerga y tecnicismos innecesarios; explica las cosas de
+forma sencilla y directa.
+
+Objetivo del usuario: ${goalLabel ?? "no indicado (pregúntale cuál es si es relevante para responder)"}.
+${dietSummary}
+
+Cuando el usuario te mande una foto de un ingrediente, producto o etiqueta nutricional:
+- Dile de forma clara si ese producto encaja bien o no con su objetivo, y por qué, en 2-3 frases como máximo.
+- Propón un plato o forma concreta de usarlo que tenga sentido con su objetivo y, si aplica, con su dieta activa.
+No hace falta que analices cada nutriente en detalle salvo que el usuario lo pida explícitamente.
+Responde siempre en texto plano corto (sin markdown pesado), como en una conversación de chat.`;
+}
+
+export async function askNutritionAssistant({
+  history,
+  userText,
+  imageBuffer,
+  imageMimeType,
+  goalLabel,
+  dietSummary,
+}: AskNutritionAssistantParams): Promise<string> {
+  const contents = [
+    ...history.map((msg) => ({
+      role: msg.role,
+      parts: [{ text: msg.content }],
+    })),
+    {
+      role: "user" as const,
+      parts: [
+        ...(userText ? [{ text: userText }] : []),
+        ...(imageBuffer && imageMimeType
+          ? [{ inlineData: { mimeType: imageMimeType, data: imageBuffer.toString("base64") } }]
+          : []),
+      ],
+    },
+  ];
+
+  const response = await getGenAI().models.generateContent({
+    model: GEMINI_MODEL,
+    contents,
+    config: {
+      systemInstruction: buildAssistantSystemInstruction(goalLabel, dietSummary),
+      thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
+    },
+  });
+
+  const text = response.text;
+  if (!text) {
+    throw new Error("Gemini returned an empty response");
+  }
+
+  return text;
+}

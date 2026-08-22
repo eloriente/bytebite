@@ -8,13 +8,15 @@ generator client {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String
-  role      String   @default("USER")
-  diets     Diet[]
-  createdAt DateTime @default(now())
+  id           String        @id @default(cuid())
+  email        String        @unique
+  password     String
+  name         String
+  role         String        @default("USER")
+  goal         String?
+  diets        Diet[]
+  conversation Conversation?
+  createdAt    DateTime      @default(now())
 }
 
 model Diet {
@@ -53,6 +55,24 @@ model MealOption {
   name        String
   description String?
   items       Item[]
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  userId    String    @unique
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  Message[]
+  createdAt DateTime  @default(now())
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String
+  content        String
+  imagePath      String?
+  createdAt      DateTime     @default(now())
 }
 
 model Item {
