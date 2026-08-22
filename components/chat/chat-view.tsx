@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ImagePlus, Send, X, Sparkles } from "lucide-react";
+import { Camera, ImagePlus, Send, X, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn, parseErrorBody } from "@/lib/utils";
@@ -22,7 +22,8 @@ export function ChatView({ initialMessages }: { initialMessages: ChatMessage[] }
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -38,7 +39,8 @@ export function ChatView({ initialMessages }: { initialMessages: ChatMessage[] }
   function clearImage() {
     setImage(null);
     setImagePreview(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (cameraInputRef.current) cameraInputRef.current.value = "";
+    if (galleryInputRef.current) galleryInputRef.current.value = "";
   }
 
   async function handleSend() {
@@ -155,10 +157,17 @@ export function ChatView({ initialMessages }: { initialMessages: ChatMessage[] }
         )}
         <div className="flex items-end gap-2">
           <input
-            ref={fileInputRef}
+            ref={cameraInputRef}
             type="file"
             accept="image/jpeg,image/png,image/webp"
             capture="environment"
+            className="hidden"
+            onChange={handleImagePick}
+          />
+          <input
+            ref={galleryInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
             className="hidden"
             onChange={handleImagePick}
           />
@@ -167,11 +176,22 @@ export function ChatView({ initialMessages }: { initialMessages: ChatMessage[] }
             variant="outline"
             size="icon"
             className="shrink-0"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => cameraInputRef.current?.click()}
+            disabled={sending}
+          >
+            <Camera className="h-4 w-4" />
+            <span className="sr-only">Hacer foto</span>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="shrink-0"
+            onClick={() => galleryInputRef.current?.click()}
             disabled={sending}
           >
             <ImagePlus className="h-4 w-4" />
-            <span className="sr-only">Adjuntar imagen</span>
+            <span className="sr-only">Elegir de la galería</span>
           </Button>
           <Textarea
             value={text}
