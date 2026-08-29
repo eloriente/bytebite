@@ -1,5 +1,5 @@
 # --- Dependencies ---
-FROM node:20-alpine AS deps
+FROM node:26-alpine AS deps
 WORKDIR /app
 RUN apk add --no-cache libc6-compat openssl
 COPY package.json package-lock.json* ./
@@ -7,7 +7,7 @@ COPY prisma ./prisma
 RUN npm ci
 
 # --- Build ---
-FROM node:20-alpine AS builder
+FROM node:26-alpine AS builder
 WORKDIR /app
 RUN apk add --no-cache openssl
 COPY --from=deps /app/node_modules ./node_modules
@@ -17,7 +17,7 @@ RUN npx prisma generate
 RUN npm run build
 
 # --- Runtime ---
-FROM node:20-alpine AS runner
+FROM node:26-alpine AS runner
 WORKDIR /app
 RUN apk add --no-cache openssl
 ENV NODE_ENV=production
