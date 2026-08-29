@@ -81,6 +81,10 @@ definido`). `next build` fuerza `NODE_ENV=production` para el propio build, y el
   `auth.ts` (pensado para runtime) no distinguía eso de servir tráfico de verdad; el build de
   Docker no tiene `.env`, así que el guard saltaba siempre. Bug previo a esta sesión, solo
   detectado ahora al probar un build de Docker limpio.
+- **`UntrustedHost` de NextAuth en el primer despliegue real** detrás de un proxy inverso
+  propio. `trustHost: true` en `auth.ts` — NextAuth v5 no confía en el `Host` entrante por
+  defecto salvo que se le indique explícitamente; la protección CSRF propia
+  (`lib/csrf.ts`) sigue intacta.
 
 ## [0.1.0] — 2026-08-20
 

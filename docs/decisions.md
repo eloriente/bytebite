@@ -1,5 +1,23 @@
 # Decisiones y features (registro breve)
 
+## 2026-08-29 — Despliegue real: `UntrustedHost` de NextAuth detrás del proxy inverso
+
+- Primer despliegue en `https://bytebite.eladioloriente.com` (detrás de un proxy inverso propio,
+  no expuesto directo): todas las rutas de NextAuth (`/api/auth/session`, `/providers`,
+  `/error`) fallaban con `UntrustedHost: Host must be trusted`.
+- Causa: NextAuth v5 (`@auth/core`) rechaza por defecto cualquier `Host` que no reconozca
+  explícitamente, aunque coincida con `NEXTAUTH_URL` — hay que decirle expresamente que confíe
+  en el host que le llega (típico al desplegar detrás de nginx/Caddy/Cloudflare Tunnel, no en
+  local ni en plataformas como Vercel que ya lo gestionan).
+- **Fix**: `trustHost: true` en la config de `NextAuth()` (`auth.ts`). No relaja la protección
+  CSRF (`lib/csrf.ts` sigue comprobando `Sec-Fetch-Site`/`Origin` aparte) — solo le dice a
+  NextAuth qué Host usar para construir URLs/cookies.
+- Pendiente de confirmar en el propio despliegue (no se pudo probar contra el dominio real desde
+  este entorno): que `NEXTAUTH_URL` en el `.env` del servidor sea exactamente
+  `https://bytebite.eladioloriente.com` — de eso también depende el `rpID`/origen de las
+  passkeys (`lib/webauthn-config.ts`); si no coincide, el login por passkey fallaría con un
+  error distinto (`expectedRPID`/`expectedOrigin`), no éste.
+
 ## 2026-08-29 — El build de Docker fallaba: AUTH_SECRET exigido durante el build, no solo en runtime
 
 - Tras subir los cambios de esta sesión a GitHub, `docker compose up --build` falló en

@@ -17,6 +17,12 @@ if (
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  // Autoalojado detrás de un proxy inverso propio (nginx/Caddy/Cloudflare Tunnel...): sin
+  // esto, NextAuth v5 rechaza cualquier Host que no reconozca explícitamente ("UntrustedHost"),
+  // incluso siendo el dominio real de NEXTAUTH_URL. Es el mismo dominio ya validado aparte por
+  // el CSRF de lib/csrf.ts (Sec-Fetch-Site/Origin) — esto no relaja esa comprobación, solo dice
+  // qué Host usar para construir URLs/cookies.
+  trustHost: true,
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
