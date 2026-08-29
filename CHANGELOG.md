@@ -76,6 +76,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 Runtime`), así que cualquier página protegida redirigía a `/login` aunque la sesión fuera
   válida. Solución: los callbacks de `auth.ts` ya no tocan Prisma; la comprobación de
   revocación se hizo en `lib/current-user.ts` (Node.js), usado desde el layout de `(app)`.
+- **`docker compose up --build` fallaba siempre en `npm run build`** (`AUTH_SECRET no está
+definido`). `next build` fuerza `NODE_ENV=production` para el propio build, y el guard de
+  `auth.ts` (pensado para runtime) no distinguía eso de servir tráfico de verdad; el build de
+  Docker no tiene `.env`, así que el guard saltaba siempre. Bug previo a esta sesión, solo
+  detectado ahora al probar un build de Docker limpio.
 
 ## [0.1.0] — 2026-08-20
 

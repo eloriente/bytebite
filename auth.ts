@@ -3,7 +3,16 @@ import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import { takePostAuthToken } from "@/lib/webauthn-store";
 
-if (process.env.NODE_ENV === "production" && !process.env.AUTH_SECRET) {
+// `next build` fuerza NODE_ENV=production incluso para el propio build (no solo en runtime),
+// y ese build importa este módulo al recolectar datos de cada ruta — sin que exista todavía
+// ningún AUTH_SECRET real (en Docker, el build no tiene `.env`). NEXT_PHASE distingue "estoy
+// construyendo" de "estoy sirviendo tráfico"; sin este guard, el build de Docker fallaba
+// siempre (ver docs/decisions.md).
+if (
+  process.env.NODE_ENV === "production" &&
+  process.env.NEXT_PHASE !== "phase-production-build" &&
+  !process.env.AUTH_SECRET
+) {
   throw new Error("AUTH_SECRET no está definido. Configúralo antes de arrancar en producción.");
 }
 

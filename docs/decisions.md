@@ -1,5 +1,24 @@
 # Decisiones y features (registro breve)
 
+## 2026-08-29 — El build de Docker fallaba: AUTH_SECRET exigido durante el build, no solo en runtime
+
+- Tras subir los cambios de esta sesión a GitHub, `docker compose up --build` falló en
+  `RUN npm run build` con `Error: AUTH_SECRET no está definido`, en
+  `/api/diets/[id]/activate` (cualquier ruta que importe `auth.ts` habría fallado igual).
+- Causa: el guard `if (NODE_ENV==='production' && !AUTH_SECRET) throw` en `auth.ts` es **previo
+  a esta sesión**, pensado para runtime — pero `next build` fuerza `NODE_ENV=production`
+  también para el propio proceso de build (no solo para el servidor final), y ese build importa
+  `auth.ts` al recolectar los datos de cada ruta. Como el build de Docker no tiene `.env`
+  (excluido por `.dockerignore`), `AUTH_SECRET` nunca existe en ese momento y el guard saltaba
+  siempre — este bug llevaba ahí desde antes de mis cambios, solo que nunca se había probado un
+  `docker build` limpio hasta ahora.
+- **Fix**: añadir `process.env.NEXT_PHASE !== "phase-production-build"` a la condición —
+  `NEXT_PHASE` es como Next.js distingue "me estoy construyendo" de "estoy sirviendo tráfico".
+  El guard sigue disparando igual en runtime real si falta `AUTH_SECRET`.
+- Verificado reproduciendo exactamente la condición del build de Docker en local (moviendo
+  `.env` fuera del repo y corriendo `npm run build`, que fuerza `NODE_ENV=production` igual que
+  `next build` siempre hace): fallaba antes del fix, pasa después.
+
 ## 2026-08-29 — Sistema de diseño estilo iOS/Apple, portado desde opengym
 
 - Petición explícita: "copiar el UI de opengym" con estética Apple. Como opengym es Vite/CSS
