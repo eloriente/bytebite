@@ -1,10 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Camera, ImagePlus, Send, X, Sparkles } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Camera, ImagePlus, Send, X, Sparkles, Check, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn, parseErrorBody } from "@/lib/utils";
+
+type ChatMode = "ask" | "edit";
+
+interface EditOperation {
+  action: "add_item" | "update_item" | "delete_item";
+  ingredient?: string;
+  amount?: string;
+}
 
 interface ChatMessage {
   id: string;
@@ -13,18 +22,42 @@ interface ChatMessage {
   imagePath: string | null;
   localImageUrl?: string;
   pending?: boolean;
+  editOperations?: EditOperation[] | null;
+  editStatus?: "pending" | "applied" | "discarded" | null;
+}
+
+const MODE_STORAGE_KEY = "bytebite:chatMode";
+
+function operationLabel(op: EditOperation): string {
+  const detail = [op.ingredient, op.amount].filter(Boolean).join(" · ");
+  if (op.action === "add_item") return `Añadir: ${detail}`;
+  if (op.action === "delete_item") return `Eliminar: ${detail}`;
+  return `Modificar: ${detail}`;
 }
 
 export function ChatView({ initialMessages }: { initialMessages: ChatMessage[] }) {
+  const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [text, setText] = useState("");
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mode, setMode] = useState<ChatMode>("ask");
+  const [editActionPending, setEditActionPending] = useState<string | null>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(MODE_STORAGE_KEY);
+    if (stored === "ask" || stored === "edit") setMode(stored);
+  }, []);
+
+  function changeMode(next: ChatMode) {
+    setMode(next);
+    window.localStorage.setItem(MODE_STORAGE_KEY, next);
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -65,6 +98,7 @@ export function ChatView({ initialMessages }: { initialMessages: ChatMessage[] }
 
     const formData = new FormData();
     formData.append("text", trimmed);
+    formData.append("mode", mode);
     if (image) formData.append("image", image);
 
     setText("");
@@ -82,10 +116,48 @@ export function ChatView({ initialMessages }: { initialMessages: ChatMessage[] }
     const { userMessage, assistantMessage } = await res.json();
     setMessages((prev) => [
       ...prev.filter((m) => m.id !== tempId),
-      { id: userMessage.id, role: "user", content: userMessage.content, imagePath: userMessage.imagePath },
-      { id: assistantMessage.id, role: "model", content: assistantMessage.content, imagePath: null },
+      {
+        id: userMessage.id,
+        role: "user",
+        content: userMessage.content,
+        imagePath: userMessage.imagePath,
+      },
+      {
+        id: assistantMessage.id,
+        role: "model",
+        content: assistantMessage.content,
+        imagePath: null,
+        editOperations: assistantMessage.editOperations
+          ? JSON.parse(assistantMessage.editOperations)
+          : null,
+        editStatus: assistantMessage.editStatus,
+      },
     ]);
     setSending(false);
+  }
+
+  async function handleEditAction(messageId: string, action: "apply" | "discard") {
+    setEditActionPending(messageId);
+    setError(null);
+
+    const res = await fetch(`/api/chat/messages/${messageId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    });
+
+    if (!res.ok) {
+      setError(await parseErrorBody(res, "No se pudo procesar la acción."));
+      setEditActionPending(null);
+      return;
+    }
+
+    const { message } = await res.json();
+    setMessages((prev) =>
+      prev.map((m) => (m.id === messageId ? { ...m, editStatus: message.editStatus } : m)),
+    );
+    setEditActionPending(null);
+    if (action === "apply") router.refresh();
   }
 
   return (
@@ -124,6 +196,45 @@ export function ChatView({ initialMessages }: { initialMessages: ChatMessage[] }
                 />
               )}
               <p className="whitespace-pre-wrap">{message.content}</p>
+
+              {message.editOperations && message.editOperations.length > 0 && (
+                <div className="space-y-2 rounded-lg bg-background/60 p-2">
+                  <ul className="space-y-1 text-xs">
+                    {message.editOperations.map((op, i) => (
+                      <li key={i}>{operationLabel(op)}</li>
+                    ))}
+                  </ul>
+                  {message.editStatus === "pending" && (
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="h-9 gap-1 px-3 text-xs"
+                        disabled={editActionPending === message.id}
+                        onClick={() => handleEditAction(message.id, "apply")}
+                      >
+                        <Check className="h-3 w-3" /> Aplicar
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-9 gap-1 px-3 text-xs"
+                        disabled={editActionPending === message.id}
+                        onClick={() => handleEditAction(message.id, "discard")}
+                      >
+                        <Trash2 className="h-3 w-3" /> Descartar
+                      </Button>
+                    </div>
+                  )}
+                  {message.editStatus === "applied" && (
+                    <p className="text-xs text-muted-foreground">✓ Cambios aplicados</p>
+                  )}
+                  {message.editStatus === "discarded" && (
+                    <p className="text-xs text-muted-foreground">Cambios descartados</p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -141,11 +252,35 @@ export function ChatView({ initialMessages }: { initialMessages: ChatMessage[] }
 
       {error && <p className="px-4 pb-1 text-xs text-destructive">{error}</p>}
 
-      <div className="border-t bg-background p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+      <div className="border-t border-border bg-card p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+        <div className="mb-2 flex gap-1.5">
+          <Button
+            type="button"
+            size="sm"
+            variant={mode === "ask" ? "default" : "outline"}
+            className="h-9 flex-1 text-xs"
+            onClick={() => changeMode("ask")}
+          >
+            Preguntar
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={mode === "edit" ? "default" : "outline"}
+            className="h-9 flex-1 text-xs"
+            onClick={() => changeMode("edit")}
+          >
+            Editar dieta
+          </Button>
+        </div>
         {imagePreview && (
           <div className="relative mb-2 inline-block">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={imagePreview} alt="Vista previa" className="h-16 w-16 rounded-md object-cover" />
+            <img
+              src={imagePreview}
+              alt="Vista previa"
+              className="h-16 w-16 rounded-md object-cover"
+            />
             <button
               type="button"
               onClick={clearImage}

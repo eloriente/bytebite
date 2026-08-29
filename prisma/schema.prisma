@@ -8,15 +8,58 @@ generator client {
 }
 
 model User {
-  id           String        @id @default(cuid())
-  email        String        @unique
-  password     String
-  name         String
-  role         String        @default("USER")
-  goal         String?
-  diets        Diet[]
-  conversation Conversation?
-  createdAt    DateTime      @default(now())
+  id                String             @id @default(cuid())
+  email             String             @unique
+  name              String
+  role              String             @default("USER")
+  goal              String?
+  // Se incrementa al pedir "cerrar sesión en todos los dispositivos" (ver auth.ts). El JWT
+  // de cada sesión lleva el valor con el que se emitió; si no coincide con el de la BD, la
+  // sesión se considera revocada.
+  sessionVersion    Int                @default(0)
+  reminderEnabled   Boolean            @default(false)
+  reminderHour      Int?
+  diets             Diet[]
+  conversation      Conversation?
+  authenticators    Authenticator[]
+  pushSubscriptions PushSubscription[]
+  createdAt         DateTime           @default(now())
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+}
+
+// Una passkey (credencial WebAuthn) por fila; un usuario puede tener varias
+// (distintos dispositivos). Sin contraseñas: esta es la única forma de autenticarse.
+model Authenticator {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialId String   @unique
+  publicKey    String
+  counter      Int      @default(0)
+  transports   String?
+  createdAt    DateTime @default(now())
+}
+
+// Estado de corta vida del ceremonial WebAuthn (challenges pendientes, tokens de sesión de
+// un solo uso). Vive en la base de datos, no en memoria del proceso: los distintos Route
+// Handlers de Next.js no comparten de forma fiable el estado de un módulo en memoria (cada
+// ruta puede recompilarse/reinstanciarse de forma independiente, sobre todo en dev), así que
+// un Map en memoria entre /options y /verify perdía datos de forma intermitente.
+model PendingAuthAction {
+  id        String   @id @default(cuid())
+  kind      String
+  data      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 }
 
 model Diet {
@@ -32,9 +75,9 @@ model Diet {
 }
 
 model DietDay {
-  id        String  @id @default(cuid())
+  id        String @id @default(cuid())
   dietId    String
-  diet      Diet    @relation(fields: [dietId], references: [id], onDelete: Cascade)
+  diet      Diet   @relation(fields: [dietId], references: [id], onDelete: Cascade)
   dayOfWeek String
   meals     Meal[]
 }
@@ -72,6 +115,9 @@ model Message {
   role           String
   content        String
   imagePath      String?
+  mode           String       @default("ask")
+  editOperations String?
+  editStatus     String?
   createdAt      DateTime     @default(now())
 }
 

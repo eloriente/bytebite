@@ -42,7 +42,7 @@ export function DayFields({
             id={`day-${value._key}`}
             value={value.dayOfWeek}
             onChange={(e) => onChange({ dayOfWeek: e.target.value })}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="w-full rounded-xl border-0 bg-secondary px-3.5 py-3 text-[0.95rem] tracking-[-0.012em] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
           >
             {DAYS_OF_WEEK.map((d) => (
               <option key={d} value={d}>

@@ -11,7 +11,12 @@ import {
   Plus,
   type LucideIcon,
 } from "lucide-react";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -31,7 +36,9 @@ const MEAL_ICONS: { keywords: string[]; icon: LucideIcon }[] = [
 
 function getMealIcon(name: string): LucideIcon {
   const lower = name.toLowerCase();
-  return MEAL_ICONS.find((entry) => entry.keywords.some((kw) => lower.includes(kw)))?.icon ?? Utensils;
+  return (
+    MEAL_ICONS.find((entry) => entry.keywords.some((kw) => lower.includes(kw)))?.icon ?? Utensils
+  );
 }
 
 export function MealCard({ meal }: { meal: Meal }) {
@@ -119,14 +126,16 @@ export function MealCard({ meal }: { meal: Meal }) {
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({ name: values.name }),
                     });
-                    if (!res.ok) return { error: await parseErrorBody(res, "No se pudo renombrar.") };
+                    if (!res.ok)
+                      return { error: await parseErrorBody(res, "No se pudo renombrar.") };
                   }}
                 />
                 <ConfirmDeleteButton
                   description={`Se eliminará la comida "${meal.name}" y todo su contenido.`}
                   onConfirm={async () => {
                     const res = await fetch(`/api/meals/${meal.id}`, { method: "DELETE" });
-                    if (!res.ok) return { error: await parseErrorBody(res, "No se pudo eliminar la comida.") };
+                    if (!res.ok)
+                      return { error: await parseErrorBody(res, "No se pudo eliminar la comida.") };
                   }}
                 />
               </div>
@@ -157,14 +166,24 @@ export function MealCard({ meal }: { meal: Meal }) {
                             <>
                               <EntityFormDialog
                                 trigger={
-                                  <Button type="button" variant="ghost" size="icon" className="h-7 w-7">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                  >
                                     <Pencil className="h-3.5 w-3.5" />
                                     <span className="sr-only">Editar opción</span>
                                   </Button>
                                 }
                                 title="Editar opción"
                                 fields={[
-                                  { name: "name", label: "Nombre", defaultValue: option.name, required: true },
+                                  {
+                                    name: "name",
+                                    label: "Nombre",
+                                    defaultValue: option.name,
+                                    required: true,
+                                  },
                                   {
                                     name: "description",
                                     label: "Descripción",
@@ -181,7 +200,10 @@ export function MealCard({ meal }: { meal: Meal }) {
                                       description: values.description || null,
                                     }),
                                   });
-                                  if (!res.ok) return { error: await parseErrorBody(res, "No se pudo editar.") };
+                                  if (!res.ok)
+                                    return {
+                                      error: await parseErrorBody(res, "No se pudo editar."),
+                                    };
                                 }}
                               />
                               <ConfirmDeleteButton
@@ -190,7 +212,10 @@ export function MealCard({ meal }: { meal: Meal }) {
                                   const res = await fetch(`/api/meal-options/${option.id}`, {
                                     method: "DELETE",
                                   });
-                                  if (!res.ok) return { error: await parseErrorBody(res, "No se pudo eliminar.") };
+                                  if (!res.ok)
+                                    return {
+                                      error: await parseErrorBody(res, "No se pudo eliminar."),
+                                    };
                                 }}
                               />
                             </>
@@ -233,7 +258,9 @@ export function MealCard({ meal }: { meal: Meal }) {
                               {hasMacros && !checked && (
                                 <span className="flex flex-wrap gap-1">
                                   {item.calories != null && (
-                                    <Badge variant="outline">{Math.round(item.calories)} kcal</Badge>
+                                    <Badge variant="outline">
+                                      {Math.round(item.calories)} kcal
+                                    </Badge>
                                   )}
                                   {item.protein != null && (
                                     <Badge variant="protein">{Math.round(item.protein)}g P</Badge>
@@ -251,7 +278,12 @@ export function MealCard({ meal }: { meal: Meal }) {
                               <div className="flex shrink-0 items-center gap-1 capitalize-none normal-case">
                                 <EntityFormDialog
                                   trigger={
-                                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7">
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                    >
                                       <Pencil className="h-3.5 w-3.5" />
                                       <span className="sr-only">Editar ingrediente</span>
                                     </Button>
@@ -264,11 +296,36 @@ export function MealCard({ meal }: { meal: Meal }) {
                                       defaultValue: item.ingredient,
                                       required: true,
                                     },
-                                    { name: "amount", label: "Cantidad", defaultValue: item.amount, required: true },
-                                    { name: "calories", label: "Calorías (kcal)", type: "number", defaultValue: item.calories },
-                                    { name: "protein", label: "Proteína (g)", type: "number", defaultValue: item.protein },
-                                    { name: "carbs", label: "Carbohidratos (g)", type: "number", defaultValue: item.carbs },
-                                    { name: "fat", label: "Grasa (g)", type: "number", defaultValue: item.fat },
+                                    {
+                                      name: "amount",
+                                      label: "Cantidad",
+                                      defaultValue: item.amount,
+                                      required: true,
+                                    },
+                                    {
+                                      name: "calories",
+                                      label: "Calorías (kcal)",
+                                      type: "number",
+                                      defaultValue: item.calories,
+                                    },
+                                    {
+                                      name: "protein",
+                                      label: "Proteína (g)",
+                                      type: "number",
+                                      defaultValue: item.protein,
+                                    },
+                                    {
+                                      name: "carbs",
+                                      label: "Carbohidratos (g)",
+                                      type: "number",
+                                      defaultValue: item.carbs,
+                                    },
+                                    {
+                                      name: "fat",
+                                      label: "Grasa (g)",
+                                      type: "number",
+                                      defaultValue: item.fat,
+                                    },
                                   ]}
                                   onSubmit={async (values) => {
                                     const res = await fetch(`/api/items/${item.id}`, {
@@ -277,20 +334,30 @@ export function MealCard({ meal }: { meal: Meal }) {
                                       body: JSON.stringify({
                                         ingredient: values.ingredient,
                                         amount: values.amount,
-                                        calories: values.calories === "" ? null : Number(values.calories),
-                                        protein: values.protein === "" ? null : Number(values.protein),
+                                        calories:
+                                          values.calories === "" ? null : Number(values.calories),
+                                        protein:
+                                          values.protein === "" ? null : Number(values.protein),
                                         carbs: values.carbs === "" ? null : Number(values.carbs),
                                         fat: values.fat === "" ? null : Number(values.fat),
                                       }),
                                     });
-                                    if (!res.ok) return { error: await parseErrorBody(res, "No se pudo editar.") };
+                                    if (!res.ok)
+                                      return {
+                                        error: await parseErrorBody(res, "No se pudo editar."),
+                                      };
                                   }}
                                 />
                                 <ConfirmDeleteButton
                                   description={`Se eliminará "${item.ingredient}".`}
                                   onConfirm={async () => {
-                                    const res = await fetch(`/api/items/${item.id}`, { method: "DELETE" });
-                                    if (!res.ok) return { error: await parseErrorBody(res, "No se pudo eliminar.") };
+                                    const res = await fetch(`/api/items/${item.id}`, {
+                                      method: "DELETE",
+                                    });
+                                    if (!res.ok)
+                                      return {
+                                        error: await parseErrorBody(res, "No se pudo eliminar."),
+                                      };
                                   }}
                                 />
                               </div>
@@ -329,7 +396,8 @@ export function MealCard({ meal }: { meal: Meal }) {
                               fat: values.fat === "" ? null : Number(values.fat),
                             }),
                           });
-                          if (!res.ok) return { error: await parseErrorBody(res, "No se pudo añadir.") };
+                          if (!res.ok)
+                            return { error: await parseErrorBody(res, "No se pudo añadir.") };
                         }}
                       />
                     )}
@@ -359,7 +427,8 @@ export function MealCard({ meal }: { meal: Meal }) {
                         description: values.description || null,
                       }),
                     });
-                    if (!res.ok) return { error: await parseErrorBody(res, "No se pudo crear la opción.") };
+                    if (!res.ok)
+                      return { error: await parseErrorBody(res, "No se pudo crear la opción.") };
                   }}
                 />
               )}

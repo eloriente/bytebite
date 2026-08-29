@@ -37,7 +37,15 @@ function key() {
 }
 
 export function emptyItem(): DraftItem {
-  return { _key: key(), ingredient: "", amount: "", calories: null, protein: null, carbs: null, fat: null };
+  return {
+    _key: key(),
+    ingredient: "",
+    amount: "",
+    calories: null,
+    protein: null,
+    carbs: null,
+    fat: null,
+  };
 }
 
 export function emptyOption(): DraftOption {

@@ -45,7 +45,13 @@ export function DietListItem({ diet }: { diet: DietSummary }) {
           <Link href={`/dashboard?diet=${diet.id}`}>Ver</Link>
         </Button>
         {!diet.isActive && (
-          <Button type="button" variant="ghost" size="sm" disabled={activating} onClick={handleActivate}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={activating}
+            onClick={handleActivate}
+          >
             {activating ? "Guardando…" : "Usar esta dieta"}
           </Button>
         )}
@@ -70,7 +76,8 @@ export function DietListItem({ diet }: { diet: DietSummary }) {
           description={`Se eliminará la dieta "${diet.title}" y todo su contenido.`}
           onConfirm={async () => {
             const res = await fetch(`/api/diets/${diet.id}`, { method: "DELETE" });
-            if (!res.ok) return { error: await parseErrorBody(res, "No se pudo eliminar la dieta.") };
+            if (!res.ok)
+              return { error: await parseErrorBody(res, "No se pudo eliminar la dieta.") };
           }}
         />
       </div>

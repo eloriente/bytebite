@@ -4,9 +4,15 @@ import path from "path";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { chatTextSchema, GOAL_LABELS } from "@/lib/validation/chat";
-import { askNutritionAssistant, type ChatHistoryMessage } from "@/lib/gemini";
-import { summarizeActiveDietForPrompt } from "@/lib/diet";
+import { chatModeSchema, chatTextSchema, GOAL_LABELS } from "@/lib/validation/chat";
+import { dietEditOperationsSchema, type DietEditOperation } from "@/lib/validation/diet";
+import {
+  askNutritionAssistant,
+  proposeDietEdit,
+  type ChatHistoryMessage,
+  type RawDietEditOperation,
+} from "@/lib/gemini";
+import { buildDietEditContext, summarizeActiveDietForPrompt } from "@/lib/diet";
 
 const IMAGE_MIME_EXTENSIONS: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -48,9 +54,13 @@ export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const rawText = formData.get("text");
   const image = formData.get("image");
+  const rawMode = formData.get("mode");
 
   const textParsed = chatTextSchema.safeParse(typeof rawText === "string" ? rawText : "");
   const userText = textParsed.success ? textParsed.data : "";
+
+  const modeParsed = chatModeSchema.safeParse(typeof rawMode === "string" ? rawMode : "ask");
+  const mode = modeParsed.success ? modeParsed.data : "ask";
 
   const hasImage = image instanceof File && image.size > 0;
   if (!userText && !hasImage) {
@@ -68,10 +78,7 @@ export async function POST(request: NextRequest) {
     const file = image as File;
     const extension = IMAGE_MIME_EXTENSIONS[file.type];
     if (!extension) {
-      return NextResponse.json(
-        { error: "La imagen debe ser JPEG, PNG o WebP." },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "La imagen debe ser JPEG, PNG o WebP." }, { status: 400 });
     }
     if (file.size > MAX_IMAGE_SIZE) {
       return NextResponse.json(
@@ -103,7 +110,21 @@ export async function POST(request: NextRequest) {
               select: {
                 name: true,
                 options: {
-                  select: { name: true, items: { select: { ingredient: true, amount: true } } },
+                  select: {
+                    id: true,
+                    name: true,
+                    items: {
+                      select: {
+                        id: true,
+                        ingredient: true,
+                        amount: true,
+                        calories: true,
+                        protein: true,
+                        carbs: true,
+                        fat: true,
+                      },
+                    },
+                  },
                 },
               },
             },
@@ -129,25 +150,89 @@ export async function POST(request: NextRequest) {
     .reverse()
     .map((m) => ({ role: m.role as "user" | "model", content: m.content }));
 
-  const goalLabel = user?.goal ? GOAL_LABELS[user.goal as keyof typeof GOAL_LABELS] ?? null : null;
-  const dietSummary = summarizeActiveDietForPrompt(activeDiet);
+  const goalLabel = user?.goal
+    ? (GOAL_LABELS[user.goal as keyof typeof GOAL_LABELS] ?? null)
+    : null;
 
-  let assistantReply: string;
-  try {
-    assistantReply = await askNutritionAssistant({
-      history,
-      userText,
-      imageBuffer,
-      imageMimeType,
-      goalLabel,
-      dietSummary,
-    });
-  } catch (error) {
-    console.error("Error al consultar el asistente de Gemini:", error);
-    return NextResponse.json(
-      { error: "No se pudo obtener respuesta del asistente. Inténtalo de nuevo." },
-      { status: 502 },
+  let assistantContent: string;
+  let editOperations: DietEditOperation[] = [];
+
+  if (mode === "edit") {
+    const dietContext = buildDietEditContext(activeDiet);
+
+    let result: { reply: string; operations: RawDietEditOperation[] };
+    try {
+      result = await proposeDietEdit({
+        history,
+        userText,
+        imageBuffer,
+        imageMimeType,
+        goalLabel,
+        dietContext,
+      });
+    } catch (error) {
+      console.error("Error al consultar el asistente de Gemini (edit):", error);
+      return NextResponse.json(
+        { error: "No se pudo obtener respuesta del asistente. Inténtalo de nuevo." },
+        { status: 502 },
+      );
+    }
+
+    assistantContent = result.reply;
+
+    const validOptionIds = new Set(
+      activeDiet?.days.flatMap((d) => d.meals.flatMap((m) => m.options.map((o) => o.id))) ?? [],
     );
+    const validItemIds = new Set(
+      activeDiet?.days.flatMap((d) =>
+        d.meals.flatMap((m) => m.options.flatMap((o) => o.items.map((i) => i.id))),
+      ) ?? [],
+    );
+
+    const itemLookup = new Map(
+      (
+        activeDiet?.days.flatMap((d) =>
+          d.meals.flatMap((m) => m.options.flatMap((o) => o.items)),
+        ) ?? []
+      ).map((i) => [i.id, i]),
+    );
+
+    const parsedOps = dietEditOperationsSchema.safeParse(result.operations);
+    if (parsedOps.success) {
+      editOperations = parsedOps.data
+        .filter((op) => {
+          if (op.action === "add_item") return validOptionIds.has(op.mealOptionId);
+          return validItemIds.has(op.itemId);
+        })
+        .map((op) => {
+          if (op.action === "delete_item" && (!op.ingredient || !op.amount)) {
+            const current = itemLookup.get(op.itemId);
+            if (current) {
+              return { ...op, ingredient: current.ingredient, amount: current.amount };
+            }
+          }
+          return op;
+        });
+    }
+  } else {
+    const dietSummary = summarizeActiveDietForPrompt(activeDiet);
+
+    try {
+      assistantContent = await askNutritionAssistant({
+        history,
+        userText,
+        imageBuffer,
+        imageMimeType,
+        goalLabel,
+        dietSummary,
+      });
+    } catch (error) {
+      console.error("Error al consultar el asistente de Gemini:", error);
+      return NextResponse.json(
+        { error: "No se pudo obtener respuesta del asistente. Inténtalo de nuevo." },
+        { status: 502 },
+      );
+    }
   }
 
   const [userMessage, assistantMessage] = await prisma.$transaction([
@@ -157,13 +242,17 @@ export async function POST(request: NextRequest) {
         role: "user",
         content: userText || "(imagen)",
         imagePath,
+        mode,
       },
     }),
     prisma.message.create({
       data: {
         conversationId: conversation.id,
         role: "model",
-        content: assistantReply,
+        content: assistantContent,
+        mode,
+        editOperations: editOperations.length ? JSON.stringify(editOperations) : null,
+        editStatus: editOperations.length ? "pending" : null,
       },
     }),
   ]);

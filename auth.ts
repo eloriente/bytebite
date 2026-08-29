@@ -1,7 +1,7 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { takePostAuthToken } from "@/lib/webauthn-store";
 
 if (process.env.NODE_ENV === "production" && !process.env.AUTH_SECRET) {
   throw new Error("AUTH_SECRET no está definido. Configúralo antes de arrancar en producción.");
@@ -14,39 +14,49 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   providers: [
     Credentials({
+      // No hay contraseña: el "credential" es un token de un solo uso, de vida muy corta,
+      // que /api/auth/webauthn/{register,login}-verify emiten después de comprobar la
+      // firma de la passkey (ver lib/webauthn-store.ts). Toda la emisión de sesión pasa
+      // por aquí, sea cual sea el ceremonial WebAuthn que la precedió.
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Contraseña", type: "password" },
+        token: { label: "Token", type: "text" },
       },
       authorize: async (credentials) => {
-        const email = credentials?.email as string | undefined;
-        const password = credentials?.password as string | undefined;
-        if (!email || !password) return null;
+        const token = credentials?.token as string | undefined;
+        if (!token) return null;
 
-        const user = await prisma.user.findUnique({ where: { email } });
+        const userId = await takePostAuthToken(token);
+        if (!userId) return null;
+
+        const user = await prisma.user.findUnique({ where: { id: userId } });
         if (!user) return null;
-
-        const isValid = await bcrypt.compare(password, user.password);
-        if (!isValid) return null;
 
         return {
           id: user.id,
           email: user.email,
           name: user.name,
+          sessionVersion: user.sessionVersion,
         };
       },
     }),
   ],
   callbacks: {
+    // `jwt`/`session` corren también en middleware.ts, que Next.js ejecuta en el Edge
+    // Runtime — Prisma (motor SQLite) no funciona ahí. Por eso estos callbacks NUNCA tocan
+    // Prisma: solo mueven datos ya presentes en el JWT/`user`. La comprobación real de
+    // `sessionVersion` (revocación por "cerrar sesión en todos los dispositivos") se hace
+    // en Node.js, en `lib/current-user.ts#getCurrentUser`, usado por el layout de `(app)`.
     jwt: async ({ token, user }) => {
       if (user) {
         token.id = user.id;
+        token.sessionVersion = user.sessionVersion;
       }
       return token;
     },
     session: async ({ session, token }) => {
       if (session.user) {
         session.user.id = token.id as string;
+        session.user.sessionVersion = token.sessionVersion;
       }
       return session;
     },

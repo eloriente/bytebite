@@ -22,9 +22,9 @@ export default async function DietsPage() {
   });
 
   return (
-    <main className="mx-auto flex max-w-lg flex-col gap-4 px-4 pb-24 pt-6">
+    <main className="mx-auto flex max-w-lg flex-col gap-4 px-4 pb-[calc(var(--tabbar-h)+1.5rem+var(--sab))] pt-6">
       <header className="flex items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">Gestionar dietas</h1>
+        <h1 className="t-title">Gestionar dietas</h1>
         <Button asChild variant="outline" size="sm">
           <Link href="/upload">Nueva dieta</Link>
         </Button>

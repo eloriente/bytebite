@@ -52,6 +52,7 @@ export function ItemFields({
             <Input
               id={`calories-${value._key}`}
               type="number"
+              inputMode="decimal"
               step="any"
               value={value.calories ?? ""}
               onChange={(e) => onChange({ calories: numberOrNull(e.target.value) })}
@@ -62,6 +63,7 @@ export function ItemFields({
             <Input
               id={`protein-${value._key}`}
               type="number"
+              inputMode="decimal"
               step="any"
               value={value.protein ?? ""}
               onChange={(e) => onChange({ protein: numberOrNull(e.target.value) })}
@@ -72,6 +74,7 @@ export function ItemFields({
             <Input
               id={`carbs-${value._key}`}
               type="number"
+              inputMode="decimal"
               step="any"
               value={value.carbs ?? ""}
               onChange={(e) => onChange({ carbs: numberOrNull(e.target.value) })}
@@ -82,6 +85,7 @@ export function ItemFields({
             <Input
               id={`fat-${value._key}`}
               type="number"
+              inputMode="decimal"
               step="any"
               value={value.fat ?? ""}
               onChange={(e) => onChange({ fat: numberOrNull(e.target.value) })}
@@ -92,7 +96,7 @@ export function ItemFields({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+          className="h-10 w-10 shrink-0 text-muted-foreground hover:text-destructive"
           onClick={onRemove}
           disabled={!canRemove}
         >

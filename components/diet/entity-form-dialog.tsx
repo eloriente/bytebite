@@ -90,6 +90,7 @@ export function EntityFormDialog({
                   id={field.name}
                   name={field.name}
                   type={field.type === "number" ? "number" : "text"}
+                  inputMode={field.type === "number" ? "decimal" : undefined}
                   step={field.type === "number" ? "any" : undefined}
                   defaultValue={field.defaultValue ?? ""}
                   placeholder={field.placeholder}

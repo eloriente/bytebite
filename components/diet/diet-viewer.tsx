@@ -14,8 +14,8 @@ import type { DietDay } from "@/components/diet/types";
 export function DietViewer({ days, dietId }: { days: DietDay[]; dietId: string }) {
   const [editing, setEditing] = useState(false);
   const orderedDays = useMemo(() => {
-    const known = DAYS_OF_WEEK.filter((d) => days.some((day) => day.dayOfWeek === d)).map(
-      (d) => days.find((day) => day.dayOfWeek === d)!,
+    const known = DAYS_OF_WEEK.filter((d) => days.some((day) => day.dayOfWeek === d)).map((d) =>
+      days.find((day) => day.dayOfWeek === d)!,
     );
     const unknown = days.filter((day) => !DAYS_OF_WEEK.includes(day.dayOfWeek as any));
     return [...known, ...unknown];

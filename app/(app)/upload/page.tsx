@@ -7,9 +7,9 @@ export default async function UploadPage() {
   if (!session?.user?.id) redirect("/login");
 
   return (
-    <main className="mx-auto flex max-w-lg flex-col gap-6 px-4 pb-24 pt-10">
+    <main className="mx-auto flex max-w-lg flex-col gap-6 px-4 pb-[calc(var(--tabbar-h)+1.5rem+var(--sab))] pt-10">
       <header>
-        <h1 className="text-xl font-semibold">Subir dieta</h1>
+        <h1 className="t-title">Subir dieta</h1>
         <p className="mt-1 text-sm text-muted-foreground">Elige cómo quieres crear tu dieta.</p>
       </header>
 

@@ -49,7 +49,7 @@ export function ConfirmDeleteButton({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+          className="h-10 w-10 text-muted-foreground hover:text-destructive"
           onClick={(e) => e.stopPropagation()}
         >
           <Trash2 className="h-4 w-4" />

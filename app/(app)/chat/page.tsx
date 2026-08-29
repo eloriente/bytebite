@@ -15,13 +15,15 @@ export default async function ChatPage() {
   });
 
   return (
-    <main className="mx-auto flex h-[calc(100dvh-3.5rem-env(safe-area-inset-top))] w-full max-w-lg flex-col">
+    <main className="mx-auto flex h-[calc(100dvh-var(--header-h)-var(--sat)-var(--tabbar-h)-var(--sab))] w-full max-w-lg flex-col">
       <ChatView
         initialMessages={conversation.messages.map((m) => ({
           id: m.id,
           role: m.role as "user" | "model",
           content: m.content,
           imagePath: m.imagePath,
+          editOperations: m.editOperations ? JSON.parse(m.editOperations) : null,
+          editStatus: m.editStatus as "pending" | "applied" | "discarded" | null,
         }))}
       />
     </main>

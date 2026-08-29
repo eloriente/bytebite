@@ -6,11 +6,7 @@ import { DietViewer } from "@/components/diet/diet-viewer";
 import { Button } from "@/components/ui/button";
 import { UtensilsCrossed } from "lucide-react";
 
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: { diet?: string };
-}) {
+export default async function DashboardPage({ searchParams }: { searchParams: { diet?: string } }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
@@ -47,7 +43,7 @@ export default async function DashboardPage({
 
   if (!diet) {
     return (
-      <main className="flex min-h-[calc(100dvh-3.5rem-env(safe-area-inset-top))] flex-col items-center justify-center gap-4 p-6 text-center">
+      <main className="flex min-h-[calc(100dvh-var(--header-h)-var(--sat)-var(--tabbar-h)-var(--sab))] flex-col items-center justify-center gap-4 p-6 text-center">
         <UtensilsCrossed className="h-12 w-12 text-muted-foreground" />
         <h1 className="text-xl font-semibold">Aún no tienes una dieta activa</h1>
         <p className="max-w-xs text-sm text-muted-foreground">
@@ -61,7 +57,7 @@ export default async function DashboardPage({
   }
 
   return (
-    <main className="mx-auto flex max-w-lg flex-col gap-4 px-4 pb-24 pt-6">
+    <main className="mx-auto flex max-w-lg flex-col gap-4 px-4 pb-[calc(var(--tabbar-h)+1.5rem+var(--sab))] pt-6">
       <header className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs text-muted-foreground">Dieta activa</p>

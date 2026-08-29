@@ -14,3 +14,9 @@ export const goalUpdateSchema = z.object({
 });
 
 export const chatTextSchema = z.string().trim().max(2000);
+
+export const chatModeSchema = z.enum(["ask", "edit"]);
+
+export const messageActionSchema = z.object({
+  action: z.enum(["apply", "discard"]),
+});

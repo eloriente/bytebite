@@ -34,11 +34,14 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 space-y-4 rounded-xl border bg-background p-5 shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+        // Anclado abajo, no centrado: en una app mobile-only es más alcanzable con el
+        // pulgar que un modal centrado (mismo criterio que los sheets de opengym).
+        "fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-lg space-y-4 rounded-t-xl border-t bg-card p-5 pb-[calc(1.25rem+var(--sab))] shadow-lg duration-200 ease-apple data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
         className,
       )}
       {...props}
     >
+      <div className="mx-auto -mt-1 mb-1 h-1 w-10 rounded-full bg-muted" aria-hidden="true" />
       {children}
       <DialogPrimitive.Close className="absolute right-4 top-4 rounded-md text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
         <X className="h-4 w-4" />
@@ -54,7 +57,10 @@ const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivEleme
 );
 
 const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex flex-col-reverse gap-2 sm:flex-row sm:justify-end", className)} {...props} />
+  <div
+    className={cn("flex flex-col-reverse gap-2 sm:flex-row sm:justify-end", className)}
+    {...props}
+  />
 );
 
 const DialogTitle = React.forwardRef<

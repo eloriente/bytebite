@@ -3,90 +3,89 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
+import {
+  browserSupportsWebAuthn,
+  startAuthentication,
+  startRegistration,
+} from "@simplewebauthn/browser";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { loginSchema, registerSchema } from "@/lib/validation/auth";
+import { passkeyRegisterOptionsSchema } from "@/lib/validation/auth";
+import { parseErrorBody } from "@/lib/utils";
 
-function LoginForm() {
+async function finishSignIn(token: string) {
+  const res = await signIn("credentials", { token, redirect: false });
+  if (res?.error) throw new Error("No se pudo iniciar sesión. Inténtalo de nuevo.");
+}
+
+function friendlyError(error: unknown, fallback: string) {
+  if (error instanceof Error) {
+    if (error.name === "NotAllowedError") return "Cancelado.";
+    return error.message || fallback;
+  }
+  return fallback;
+}
+
+function LoginPanel() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleLogin() {
     setError(null);
-
-    const parsed = loginSchema.safeParse({ email, password });
-    if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? "Datos inválidos.");
+    if (!browserSupportsWebAuthn()) {
+      setError("Este navegador no soporta passkeys.");
       return;
     }
 
     setLoading(true);
-    const res = await signIn("credentials", {
-      email: parsed.data.email,
-      password: parsed.data.password,
-      redirect: false,
-    });
-    setLoading(false);
+    try {
+      const optionsRes = await fetch("/api/auth/webauthn/login-options", { method: "POST" });
+      if (!optionsRes.ok) {
+        throw new Error(await parseErrorBody(optionsRes, "No se pudo iniciar el login."));
+      }
+      const { cid, options } = await optionsRes.json();
 
-    if (res?.error) {
-      setError("Email o contraseña incorrectos.");
-      return;
+      const credential = await startAuthentication(options);
+
+      const verifyRes = await fetch("/api/auth/webauthn/login-verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cid, credential }),
+      });
+      if (!verifyRes.ok) {
+        throw new Error(await parseErrorBody(verifyRes, "No se pudo verificar la passkey."));
+      }
+      const { token } = await verifyRes.json();
+
+      await finishSignIn(token);
+      router.push("/dashboard");
+      router.refresh();
+    } catch (err) {
+      setError(friendlyError(err, "No se pudo iniciar sesión."));
+    } finally {
+      setLoading(false);
     }
-
-    router.push("/dashboard");
-    router.refresh();
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-1.5">
-        <label htmlFor="login-email" className="text-sm font-medium">
-          Email
-        </label>
-        <input
-          id="login-email"
-          type="email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-      </div>
-
-      <div className="space-y-1.5">
-        <label htmlFor="login-password" className="text-sm font-medium">
-          Contraseña
-        </label>
-        <input
-          id="login-password"
-          type="password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-      </div>
-
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Inicia sesión con la passkey de tu dispositivo (huella, Face ID, PIN...).
+      </p>
       {error && <p className="text-sm text-destructive">{error}</p>}
-
-      <Button type="submit" className="w-full" size="lg" disabled={loading}>
-        {loading ? "Entrando…" : "Entrar"}
+      <Button className="w-full" size="lg" onClick={handleLogin} disabled={loading}>
+        {loading ? "Verificando…" : "Entrar con passkey"}
       </Button>
-    </form>
+    </div>
   );
 }
 
-function RegisterForm() {
+function RegisterPanel() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -96,7 +95,12 @@ function RegisterForm() {
     setError(null);
     setFieldErrors({});
 
-    const parsed = registerSchema.safeParse({ name, email, password, confirmPassword });
+    if (!browserSupportsWebAuthn()) {
+      setError("Este navegador no soporta passkeys.");
+      return;
+    }
+
+    const parsed = passkeyRegisterOptionsSchema.safeParse({ name, email });
     if (!parsed.success) {
       const errors: Record<string, string> = {};
       for (const issue of parsed.error.issues) {
@@ -108,37 +112,46 @@ function RegisterForm() {
     }
 
     setLoading(true);
-    const res = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(parsed.data),
-    });
-    const data = await res.json().catch(() => ({}));
+    try {
+      const optionsRes = await fetch("/api/auth/webauthn/register-options", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(parsed.data),
+      });
+      if (!optionsRes.ok) {
+        throw new Error(await parseErrorBody(optionsRes, "No se pudo crear la cuenta."));
+      }
+      const { cid, options } = await optionsRes.json();
 
-    if (!res.ok) {
+      const credential = await startRegistration(options);
+
+      const verifyRes = await fetch("/api/auth/webauthn/register-verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cid, credential }),
+      });
+      if (!verifyRes.ok) {
+        throw new Error(await parseErrorBody(verifyRes, "No se pudo verificar la passkey."));
+      }
+      const { token } = await verifyRes.json();
+
+      await finishSignIn(token);
+      router.push("/dashboard");
+      router.refresh();
+    } catch (err) {
+      setError(friendlyError(err, "No se pudo crear la cuenta."));
+    } finally {
       setLoading(false);
-      setError(data.error ?? "No se ha podido crear la cuenta.");
-      return;
     }
-
-    const signInRes = await signIn("credentials", {
-      email: parsed.data.email,
-      password: parsed.data.password,
-      redirect: false,
-    });
-    setLoading(false);
-
-    if (signInRes?.error) {
-      setError("Cuenta creada. Inicia sesión desde la pestaña 'Iniciar sesión'.");
-      return;
-    }
-
-    router.push("/dashboard");
-    router.refresh();
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Crea tu cuenta y registra una passkey de este dispositivo. Sin contraseñas: si pierdes el
+        dispositivo, pierdes el acceso a la cuenta (sin recuperación).
+      </p>
+
       <div className="space-y-1.5">
         <label htmlFor="register-name" className="text-sm font-medium">
           Nombre
@@ -149,7 +162,7 @@ function RegisterForm() {
           required
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="w-full rounded-xl border-0 bg-secondary px-3.5 py-3 text-[0.95rem] tracking-[-0.012em] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
         />
         {fieldErrors.name && <p className="text-xs text-destructive">{fieldErrors.name}</p>}
       </div>
@@ -164,49 +177,15 @@ function RegisterForm() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="w-full rounded-xl border-0 bg-secondary px-3.5 py-3 text-[0.95rem] tracking-[-0.012em] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
         />
         {fieldErrors.email && <p className="text-xs text-destructive">{fieldErrors.email}</p>}
-      </div>
-
-      <div className="space-y-1.5">
-        <label htmlFor="register-password" className="text-sm font-medium">
-          Contraseña
-        </label>
-        <input
-          id="register-password"
-          type="password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-        {fieldErrors.password && (
-          <p className="text-xs text-destructive">{fieldErrors.password}</p>
-        )}
-      </div>
-
-      <div className="space-y-1.5">
-        <label htmlFor="register-confirm-password" className="text-sm font-medium">
-          Confirmar contraseña
-        </label>
-        <input
-          id="register-confirm-password"
-          type="password"
-          required
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-        {fieldErrors.confirmPassword && (
-          <p className="text-xs text-destructive">{fieldErrors.confirmPassword}</p>
-        )}
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       <Button type="submit" className="w-full" size="lg" disabled={loading}>
-        {loading ? "Creando cuenta…" : "Crear cuenta"}
+        {loading ? "Creando passkey…" : "Crear cuenta con passkey"}
       </Button>
     </form>
   );
@@ -220,7 +199,7 @@ export default function LoginPage() {
       </div>
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">ByteBite</h1>
+          <h1 className="t-large">ByteBite</h1>
           <p className="mt-1 text-sm text-muted-foreground">Tu dieta, siempre a mano.</p>
         </div>
 
@@ -230,10 +209,10 @@ export default function LoginPage() {
             <TabsTrigger value="register">Crear cuenta</TabsTrigger>
           </TabsList>
           <TabsContent value="login">
-            <LoginForm />
+            <LoginPanel />
           </TabsContent>
           <TabsContent value="register">
-            <RegisterForm />
+            <RegisterPanel />
           </TabsContent>
         </Tabs>
       </div>

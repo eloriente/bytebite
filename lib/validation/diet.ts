@@ -57,3 +57,38 @@ export const itemUpdateSchema = dietItemSchema.partial();
 export const dietRenameSchema = z.object({
   title: z.string().trim().min(1, "El título es obligatorio.").max(200),
 });
+
+// Operaciones que el asistente de chat (modo Edit) puede proponer sobre los
+// ingredientes de la dieta activa. Alcance v1: solo items, nunca comidas/opciones/días.
+export const dietEditOperationSchema = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("add_item"),
+    mealOptionId: z.string().min(1),
+    ingredient: z.string().trim().min(1).max(200),
+    amount: z.string().trim().min(1).max(100),
+    calories: z.coerce.number().min(0).nullable().optional(),
+    protein: z.coerce.number().min(0).nullable().optional(),
+    carbs: z.coerce.number().min(0).nullable().optional(),
+    fat: z.coerce.number().min(0).nullable().optional(),
+  }),
+  z.object({
+    action: z.literal("update_item"),
+    itemId: z.string().min(1),
+    ingredient: z.string().trim().min(1).max(200).optional(),
+    amount: z.string().trim().min(1).max(100).optional(),
+    calories: z.coerce.number().min(0).nullable().optional(),
+    protein: z.coerce.number().min(0).nullable().optional(),
+    carbs: z.coerce.number().min(0).nullable().optional(),
+    fat: z.coerce.number().min(0).nullable().optional(),
+  }),
+  z.object({
+    action: z.literal("delete_item"),
+    itemId: z.string().min(1),
+    ingredient: z.string().trim().max(200).optional(),
+    amount: z.string().trim().max(100).optional(),
+  }),
+]);
+
+export const dietEditOperationsSchema = z.array(dietEditOperationSchema).max(20);
+
+export type DietEditOperation = z.infer<typeof dietEditOperationSchema>;

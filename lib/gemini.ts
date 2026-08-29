@@ -126,9 +126,7 @@ el esquema proporcionado. Reglas:
   necesario que el documento incluya estos datos). Si no puedes hacer una estimación razonable para un
   ingrediente o cantidad concretos, deja esos campos en null en lugar de forzar un valor.`;
 
-export async function extractDietFromPdf(
-  pdfBuffer: Buffer,
-): Promise<ParsedDiet> {
+export async function extractDietFromPdf(pdfBuffer: Buffer): Promise<ParsedDiet> {
   const base64Pdf = pdfBuffer.toString("base64");
 
   const response = await getGenAI().models.generateContent({
@@ -190,6 +188,139 @@ Cuando el usuario te mande una foto de un ingrediente, producto o etiqueta nutri
 - Propón un plato o forma concreta de usarlo que tenga sentido con su objetivo y, si aplica, con su dieta activa.
 No hace falta que analices cada nutriente en detalle salvo que el usuario lo pida explícitamente.
 Responde siempre en texto plano corto (sin markdown pesado), como en una conversación de chat.`;
+}
+
+/**
+ * Structured Output schema para el modo Edit del asistente de chat: una
+ * respuesta en texto ("reply") más una lista plana de operaciones sobre
+ * ingredientes de la dieta activa. Alcance v1: solo items (add/update/delete),
+ * nunca comidas/opciones/días.
+ */
+export const dietEditResponseSchema = {
+  type: Type.OBJECT,
+  properties: {
+    reply: { type: Type.STRING },
+    operations: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          action: { type: Type.STRING }, // "add_item" | "update_item" | "delete_item"
+          mealOptionId: { type: Type.STRING, nullable: true },
+          itemId: { type: Type.STRING, nullable: true },
+          ingredient: { type: Type.STRING, nullable: true },
+          amount: { type: Type.STRING, nullable: true },
+          calories: { type: Type.NUMBER, nullable: true },
+          protein: { type: Type.NUMBER, nullable: true },
+          carbs: { type: Type.NUMBER, nullable: true },
+          fat: { type: Type.NUMBER, nullable: true },
+        },
+        required: ["action"],
+      },
+    },
+  },
+  required: ["reply", "operations"],
+};
+
+export interface RawDietEditOperation {
+  action: string;
+  mealOptionId?: string | null;
+  itemId?: string | null;
+  ingredient?: string | null;
+  amount?: string | null;
+  calories?: number | null;
+  protein?: number | null;
+  carbs?: number | null;
+  fat?: number | null;
+}
+
+export interface ProposeDietEditResult {
+  reply: string;
+  operations: RawDietEditOperation[];
+}
+
+function buildDietEditSystemInstruction(goalLabel: string | null, dietContext: string): string {
+  return `Eres el asistente de ByteBite en modo edición de dieta. Hablas en español, con un tono
+cercano e informal, como lo haría un amigo que sabe de nutrición.
+
+Objetivo del usuario: ${goalLabel ?? "no indicado"}.
+${dietContext}
+
+Tu único poder de edición es sobre INGREDIENTES (items) dentro de opciones de comida que ya
+existen en la dieta activa. No puedes crear ni eliminar comidas, opciones ni días completos.
+
+Reglas estrictas:
+- Si el usuario pide un cambio de ingrediente (añadir, sustituir, quitar, ajustar cantidad),
+  genera una o más operaciones en "operations":
+  - "add_item": requiere "mealOptionId" (el id real de la opción donde va, tomado del contexto)
+    más "ingredient" y "amount"; opcionalmente estima "calories"/"protein"/"carbs"/"fat".
+  - "update_item": requiere "itemId" (id real del item) y TODOS los campos que cambian de
+    verdad. Si el usuario sustituye un ingrediente por otro (p.ej. "pollo por pavo"), incluye
+    SIEMPRE el nuevo "ingredient" (y "amount" si cambia la cantidad), además de las macros
+    reestimadas — no actualices solo las macros dejando el nombre del ingrediente antiguo.
+  - "delete_item": requiere "itemId" (id real del item); incluye también "ingredient"/"amount"
+    del item que borras, solo para que se pueda mostrar en la interfaz.
+  - Usa EXCLUSIVAMENTE los ids que aparecen en el contexto (entre corchetes). Nunca inventes
+    un id ni lo adivines.
+- Mantén las propuestas coherentes con los macros que el usuario ya consume (visibles en el
+  contexto): no dupliques calorías ni rompas el equilibrio actual salvo que el usuario lo pida
+  expresamente.
+- Si el usuario solo pregunta algo y no pide ningún cambio, deja "operations" como array vacío
+  y responde solo con texto en "reply".
+- "reply" es siempre el mensaje de chat que verá el usuario: explica en 2-3 frases qué cambio
+  propones (o responde su pregunta), en texto plano corto, sin markdown pesado.`;
+}
+
+interface ProposeDietEditParams {
+  history: ChatHistoryMessage[];
+  userText: string;
+  imageBuffer?: Buffer;
+  imageMimeType?: string;
+  goalLabel: string | null;
+  dietContext: string;
+}
+
+export async function proposeDietEdit({
+  history,
+  userText,
+  imageBuffer,
+  imageMimeType,
+  goalLabel,
+  dietContext,
+}: ProposeDietEditParams): Promise<ProposeDietEditResult> {
+  const contents = [
+    ...history.map((msg) => ({
+      role: msg.role,
+      parts: [{ text: msg.content }],
+    })),
+    {
+      role: "user" as const,
+      parts: [
+        ...(userText ? [{ text: userText }] : []),
+        ...(imageBuffer && imageMimeType
+          ? [{ inlineData: { mimeType: imageMimeType, data: imageBuffer.toString("base64") } }]
+          : []),
+      ],
+    },
+  ];
+
+  const response = await getGenAI().models.generateContent({
+    model: GEMINI_MODEL,
+    contents,
+    config: {
+      systemInstruction: buildDietEditSystemInstruction(goalLabel, dietContext),
+      responseMimeType: "application/json",
+      responseSchema: dietEditResponseSchema,
+      thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
+    },
+  });
+
+  const text = response.text;
+  if (!text) {
+    throw new Error("Gemini returned an empty response");
+  }
+
+  return JSON.parse(text) as ProposeDietEditResult;
 }
 
 export async function askNutritionAssistant({

@@ -1,18 +1,26 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
-import { SideMenu } from "@/components/nav/side-menu";
+import { getCurrentUser } from "@/lib/current-user";
+import { TabBar } from "@/components/nav/tab-bar";
+import { SignOutButton } from "@/components/nav/sign-out-button";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { PushRegistration } from "@/components/push-registration";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
 
   return (
     <div className="min-h-dvh">
-      <header className="sticky top-0 z-40 flex min-h-[3.5rem] items-center gap-2 border-b bg-background/95 px-2 pt-[env(safe-area-inset-top)] backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <SideMenu />
-        <span className="text-sm font-semibold">ByteBite</span>
+      <PushRegistration />
+      <header className="sticky top-0 z-40 flex min-h-[var(--header-h)] items-center justify-between gap-2 border-b border-border bg-background/90 px-3 pt-[var(--sat)] backdrop-blur-md">
+        <span className="t-head">ByteBite</span>
+        <div className="flex items-center gap-1">
+          <ThemeToggle />
+          <SignOutButton />
+        </div>
       </header>
       {children}
+      <TabBar />
     </div>
   );
 }
